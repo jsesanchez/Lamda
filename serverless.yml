@@ -1,0 +1,69 @@
+service: sls-cirlceci #ServiceName
+
+custom:
+  settings:
+    POSTS_TABLE: posts #DynamoDB table
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: us-east-2
+  environment: ${self:custom.settings} #Enviroment Object
+  iamRoleStatements:
+   - Effect: "Allow"
+     Action: #Permitions on AWS 
+        - dynamodb:DescribeTable #Methods of table
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+     Resource:
+      - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.settings.POSTS_TABLE}" #Recurse where this rules works
+functions:
+  createPost: 
+    handler: handler.createPost
+    events: 
+    - http:
+        path: /post
+        method: post
+  getAllPost: 
+    handler: handler.getAllPost
+    events: 
+    - http:
+        path: /post
+        method: get
+  getPostId: 
+    handler: handler.getPostId
+    events: 
+    - http:
+        path: /post/{id}
+        method: get
+  updatePost: 
+    handler: handler.updatePost
+    events: 
+    - http:
+        path: /post/{id}
+        method: put
+  deletePost: 
+    handler: handler.deletePost
+    events: 
+    - http:
+        path: /post/{id}
+        method: delete
+
+resources:
+  Resources:
+    PostsTable: #TableName
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+        - AttributeName: "id" #PrimaryKey
+          AttributeType: "S" #String
+        KeySchema:
+        - AttributeName: "id"
+          KeyType: "HASH"  #PartitionKey
+        ProvisionedThroughput: #Reads - Writes per hour
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.settings.POSTS_TABLE}
